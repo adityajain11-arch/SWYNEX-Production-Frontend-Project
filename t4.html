@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SWYNEX Crypto & Finance Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom animations & smooth scrollbar */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.4);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(156, 163, 175, 0.7);
+        }
+
+        /* Pulse glow animation for active elements */
+        .glow-active {
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.35);
+        }
+
+        /* SVG chart line stroke animation */
+        .path-animate {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: dash 2s ease-in-out forwards;
+        }
+        @keyframes dash {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300 flex flex-col">
+
+    <!-- Toast Container for Notifications -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-3 max-w-sm w-full pointer-events-none"></div>
+
+    <!-- Top Navigation Bar -->
+    <header class="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 lg:px-8 py-3.5 transition-colors">
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            <!-- Logo & Title -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-500/30">
+                    <i class="fa-solid me-0.5 fa-chart-line"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-none tracking-tight">SWYNEX <span class="text-indigo-600 dark:text-indigo-400">CryptoHub</span></h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Task 3: Live API Dashboard</p>
+                </div>
+            </div>
+
+            <!-- Right Controls: Status, Docs Modal, Refresh, Theme Toggle -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- API Status Indicator -->
+                <div id="api-status-badge" class="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span id="api-status-text">CoinGecko Live</span>
+                </div>
+
+                <!-- Documentation Button -->
+                <button onclick="openDocsModal()" class="flex items-center gap-2 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors">
+                    <i class="fa-solid fa-book text-indigo-500"></i>
+                    <span class="hidden md:inline">Deployment Guide</span>
+                </button>
+
+                <!-- Refresh Data Button -->
+                <button id="refresh-btn" onclick="fetchCryptoData(true)" title="Refresh API Data" class="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors">
+                    <i id="refresh-icon" class="fa-solid fa-rotate-right"></i>
+                </button>
+
+                <!-- Light/Dark Mode Switcher -->
+                <button id="theme-toggle" onclick="toggleTheme()" title="Toggle Theme" class="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors">
+                    <i id="theme-icon" class="fa-solid fa-moon"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6 flex flex-col gap-6">
+
+        <!-- Top Overview Stats / Banners -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Market Cap Card -->
+            <div class="p-5 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium mb-2">
+                    <span>GLOBAL MARKET CAP</span>
+                    <i class="fa-solid fa-globe text-indigo-500"></i>
+                </div>
+                <div class="text-2xl font-bold text-slate-900 dark:text-white" id="stat-total-mcap">$2.48 T</div>
+                <div class="mt-2 text-xs text-emerald-600 dark:text-emerald-400 flex items-center font-medium">
+                    <i class="fa-solid fa-caret-up mr-1"></i> +2.4% past 24h
+                </div>
+            </div>
+
+            <!-- 24h Volume Card -->
+            <div class="p-5 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium mb-2">
+                    <span>24H TRADING VOLUME</span>
+                    <i class="fa-solid fa-chart-simple text-indigo-500"></i>
+                </div>
+                <div class="text-2xl font-bold text-slate-900 dark:text-white" id="stat-24h-vol">$84.12 B</div>
+                <div class="mt-2 text-xs text-emerald-600 dark:text-emerald-400 flex items-center font-medium">
+                    <i class="fa-solid fa-caret-up mr-1"></i> +5.1% past 24h
+                </div>
+            </div>
+
+            <!-- Bitcoin Dominance Card -->
+            <div class="p-5 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium mb-2">
+                    <span>BTC DOMINANCE</span>
+                    <i class="fa-brands fa-bitcoin text-amber-500"></i>
+                </div>
+                <div class="text-2xl font-bold text-slate-900 dark:text-white" id="stat-btc-dom">54.2%</div>
+                <div class="mt-2 text-xs text-slate-500 dark:text-slate-400 flex items-center">
+                    Stable market dominance
+                </div>
+            </div>
+        </div>
+
+        <!-- Toolbar: Search Bar, Category Filter Tabs & Sort Selection -->
+        <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-white dark:bg-slate-800/80 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+            
+            <!-- Search Bar -->
+            <div class="relative flex-1">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="text" id="search-input" oninput="handleSearch()" placeholder="Search coin by name or symbol (e.g. BTC, Solana)..." 
+                       class="w-full pl-10 pr-4 py-2.5 bg-slate-100 dark:bg-slate-900 border border-transparent focus:border-indigo-500 dark:focus:border-indigo-500 rounded-xl text-sm focus:outline-none transition-all">
+            </div>
+
+            <!-- Category Filter Tabs -->
+            <div class="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+                <button onclick="setCategoryFilter('all')" id="tab-all" class="category-tab px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap bg-indigo-600 text-white transition-all">
+                    All Coins
+                </button>
+                <button onclick="setCategoryFilter('gainers')" id="tab-gainers" class="category-tab px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all">
+                    🔥 Top Gainers
+                </button>
+                <button onclick="setCategoryFilter('losers')" id="tab-losers" class="category-tab px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all">
+                    📉 Top Losers
+                </button>
+                <button onclick="setCategoryFilter('watchlist')" id="tab-watchlist" class="category-tab px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all">
+                    ⭐ Watchlist (<span id="watchlist-count">0</span>)
+                </button>
+            </div>
+
+            <!-- Sort By Selector -->
+            <div class="flex items-center gap-2">
+                <label for="sort-select" class="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap font-medium">Sort by:</label>
+                <select id="sort-select" onchange="handleSort()" class="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs py-2 px-3 focus:outline-none focus:border-indigo-500">
+                    <option value="market_cap_desc">Market Cap (High to Low)</option>
+                    <option value="market_cap_asc">Market Cap (Low to High)</option>
+                    <option value="price_desc">Price (High to Low)</option>
+                    <option value="price_asc">Price (Low to High)</option>
+                    <option value="change_desc">24h Change (Highest)</option>
+                    <option value="change_asc">24h Change (Lowest)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Error & Retry Banner (Hidden by default) -->
+        <div id="error-banner" class="hidden p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-800 dark:text-rose-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2 rounded-xl bg-rose-100 dark:bg-rose-900/80 text-rose-600 dark:text-rose-300">
+                    <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-sm">API Connection Warning</h4>
+                    <p id="error-message-text" class="text-xs text-rose-600 dark:text-rose-300">Unable to fetch live network data. Showing simulated fallback data.</p>
+                </div>
+            </div>
+            <button onclick="fetchCryptoData(true)" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold whitespace-nowrap transition-colors shadow-sm">
+                <i class="fa-solid fa-arrows-rotate mr-1.5"></i> Retry Live Request
+            </button>
+        </div>
+
+        <!-- Dynamic Crypto Grid / Loading Skeleton -->
+        <div id="crypto-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <!-- Loading Skeletons will be injected here during initial load -->
+        </div>
+
+        <!-- Empty State View (Hidden by default) -->
+        <div id="empty-state" class="hidden py-16 flex flex-col items-center justify-center text-center bg-white dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 p-6">
+            <div class="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 text-2xl mb-4">
+                <i class="fa-solid fa-magnifying-glass-chart"></i>
+            </div>
+            <h3 class="font-semibold text-base mb-1">No Cryptocurrency Found</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 max-w-xs mb-4">No coins match your current search query or active filter settings.</p>
+            <button onclick="resetFilters()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-xl transition-colors">
+                Reset All Filters
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-auto border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-6 px-4 text-center text-xs text-slate-500 dark:text-slate-400">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div>
+                <span class="font-semibold text-slate-700 dark:text-slate-300">SWYNEX Internship Task 3</span> &bull; API Integration & Responsive UI
+            </div>
+            <div class="flex items-center gap-4">
+                <a href="https://github.com/adityajain11-arch/SWYNEX-API-Integration" target="_blank" rel="noopener" class="hover:text-indigo-500 transition-colors">
+                    <i class="fa-brands fa-github mr-1"></i> GitHub Repo
+                </a>
+                <a href="https://adityajain11-arch.github.io/SWYNEX-API-Integration/" target="_blank" rel="noopener" class="hover:text-indigo-500 transition-colors">
+                    <i class="fa-solid fa-globe mr-1"></i> Live Site
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Coin Detail Modal/Drawer -->
+    <div id="detail-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 transform scale-95 transition-transform duration-300 max-h-[90vh] overflow-y-auto" id="detail-modal-box">
+            
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-700/60">
+                <div class="flex items-center gap-3">
+                    <img id="modal-coin-icon" src="" alt="" class="w-10 h-10 rounded-full">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h2 id="modal-coin-name" class="font-bold text-xl">Bitcoin</h2>
+                            <span id="modal-coin-symbol" class="text-xs uppercase px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold">BTC</span>
+                        </div>
+                        <p id="modal-coin-rank" class="text-xs text-slate-500">Rank #1</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('detail-modal')" class="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Modal Content Body -->
+            <div class="py-5 flex flex-col gap-6">
+                <!-- Price Header -->
+                <div class="flex items-baseline justify-between flex-wrap gap-2">
+                    <div>
+                        <span class="text-xs text-slate-500 block mb-1">Current Price</span>
+                        <span id="modal-coin-price" class="text-3xl font-extrabold">$0.00</span>
+                    </div>
+                    <div id="modal-coin-change-badge" class="px-3 py-1 rounded-xl text-sm font-semibold flex items-center gap-1">
+                        <!-- Dynamic Badge -->
+                    </div>
+                </div>
+
+                <!-- Interactive SVG Sparkline Chart -->
+                <div class="bg-slate-50 dark:bg-slate-900/60 rounded-2xl p-4 border border-slate-200/60 dark:border-slate-700/40">
+                    <div class="flex items-center justify-between mb-3 text-xs font-medium text-slate-500">
+                        <span>7-Day Price Trajectory</span>
+                        <span class="text-indigo-500 font-semibold">Realtime Trend Visualization</span>
+                    </div>
+                    <div class="w-full h-40 relative flex items-center justify-center">
+                        <svg id="modal-chart-svg" class="w-full h-full overflow-visible" viewBox="0 0 300 100" preserveAspectRatio="none">
+                            <!-- SVG Path dynamically generated -->
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Metric Grid Details -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800">
+                        <span class="text-xs text-slate-500 block mb-1">Market Cap</span>
+                        <span id="modal-coin-mcap" class="text-sm font-bold">$0</span>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800">
+                        <span class="text-xs text-slate-500 block mb-1">24h High</span>
+                        <span id="modal-coin-high" class="text-sm font-bold text-emerald-600 dark:text-emerald-400">$0</span>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800">
+                        <span class="text-xs text-slate-500 block mb-1">24h Low</span>
+                        <span id="modal-coin-low" class="text-sm font-bold text-rose-600 dark:text-rose-400">$0</span>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800">
+                        <span class="text-xs text-slate-500 block mb-1">Total Volume</span>
+                        <span id="modal-coin-volume" class="text-sm font-bold">$0</span>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800">
+                        <span class="text-xs text-slate-500 block mb-1">Circulating Supply</span>
+                        <span id="modal-coin-supply" class="text-sm font-bold">0</span>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800">
+                        <span class="text-xs text-slate-500 block mb-1">All-Time High</span>
+                        <span id="modal-coin-ath" class="text-sm font-bold">$0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="pt-4 border-t border-slate-100 dark:border-slate-700/60 flex justify-end gap-3">
+                <button id="modal-watchlist-btn" onclick="" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 transition-colors flex items-center gap-1.5">
+                    <i class="fa-regular fa-star"></i> Toggle Watchlist
+                </button>
+                <button onclick="closeModal('detail-modal')" class="px-5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Built-in Documentation Modal -->
+    <div id="docs-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 dark:border-slate-700 transform scale-95 transition-transform duration-300 max-h-[90vh] overflow-y-auto">
+            
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-700/60">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                        <i class="fa-solid fa-file-code text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-xl">SWYNEX Internship Task 3 Docs</h2>
+                        <p class="text-xs text-slate-500">API Integration & Deployment Guide</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('docs-modal')" class="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="py-6 space-y-6 text-sm text-slate-600 dark:text-slate-300">
+                <!-- Overview -->
+                <section>
+                    <h3 class="font-bold text-base text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-layer-group text-indigo-500"></i> Project Architecture
+                    </h3>
+                    <p class="leading-relaxed text-xs sm:text-sm">
+                        This application is designed with **modular JavaScript components**, standard CSS utility patterns, real-time API state management, and failover network mechanisms.
+                    </p>
+                    <ul class="list-disc list-inside mt-2 space-y-1 text-xs text-slate-500 dark:text-slate-400">
+                        <li><strong>Live API Fetching:</strong> Consumes CoinGecko API (`/coins/markets`) for live pricing and 7-day sparkline charts.</li>
+                        <li><strong>Error Handling & Retry:</strong> Automatic fallback to realistic mock financial data if API rate-limits or network failures occur.</li>
+                        <li><strong>User Interactivity:</strong> Real-time search, category tab filtering, sorting, persistent LocalStorage watchlist, dynamic SVG charting, and modal details.</li>
+                    </ul>
+                </section>
+
+                <!-- Step-by-step Deployment Guide -->
+                <section class="space-y-3">
+                    <h3 class="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                        <i class="fa-solid fa-cloud-arrow-up text-indigo-500"></i> Deployment Step-by-Step Instructions
+                    </h3>
+                    
+                    <!-- GitHub Pages -->
+                    <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 space-y-2">
+                        <h4 class="font-semibold text-slate-800 dark:text-slate-200 text-sm flex items-center gap-2">
+                            <i class="fa-brands fa-github text-base"></i> Deploying to GitHub Pages
+                        </h4>
+                        <ol class="list-decimal list-inside text-xs space-y-1 text-slate-600 dark:text-slate-400">
+                            <li>Commit this <code class="bg-slate-200 dark:bg-slate-800 px-1 py-0.5 rounded text-indigo-500">index.html</code> file to your repository root directory.</li>
+                            <li>Go to your repository on GitHub &rarr; <strong>Settings</strong> &rarr; <strong>Pages</strong>.</li>
+                            <li>Under <em>Build and deployment</em>, set Source to <strong>Deploy from a branch</strong>.</li>
+                            <li>Select your branch (e.g., <code class="bg-slate-200 dark:bg-slate-800 px-1 py-0.5 rounded">main</code>) and folder (<code class="bg-slate-200 dark:bg-slate-800 px-1 py-0.5 rounded">/root</code>), then click <strong>Save</strong>.</li>
+                            <li>Your live URL will be ready at: <code class="text-indigo-600 dark:text-indigo-400 font-mono">https://&lt;username&gt;.github.io/&lt;repo-name&gt;/</code></li>
+                        </ol>
+                    </div>
+
+                    <!-- Vercel Deployment -->
+                    <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 space-y-2">
+                        <h4 class="font-semibold text-slate-800 dark:text-slate-200 text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-triangle-exclamation text-base text-black dark:text-white"></i> Deploying to Vercel
+                        </h4>
+                        <ol class="list-decimal list-inside text-xs space-y-1 text-slate-600 dark:text-slate-400">
+                            <li>Log in to <a href="https://vercel.com" target="_blank" class="text-indigo-500 underline">Vercel.com</a> and click <strong>Add New Project</strong>.</li>
+                            <li>Import your GitHub repository: <code class="bg-slate-200 dark:bg-slate-800 px-1 py-0.5 rounded">SWYNEX-API-Integration</code>.</li>
+                            <li>Keep standard default settings and click <strong>Deploy</strong>. Vercel will instantly generate a live production domain.</li>
+                        </ol>
+                    </div>
+                </section>
+            </div>
+
+            <div class="pt-4 border-t border-slate-100 dark:border-slate-700/60 flex justify-end">
+                <button onclick="closeModal('docs-modal')" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold">
+                    Got it, Close Docs
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script>
+        /**
+         * GLOBAL STATE MANAGEMENT
+         */
+        let cryptoData = [];
+        let filteredData = [];
+        let watchlist = JSON.parse(localStorage.getItem('swynex_watchlist') || '[]');
+        let activeCategory = 'all'; // 'all', 'gainers', 'losers', 'watchlist'
+        let searchQuery = '';
+        let currentSort = 'market_cap_desc';
+        let isUsingFallback = false;
+
+        // Fallback Mock Dataset if Live API is unavailable / rate-limited
+        const MOCK_CRYPTO_DATA = [
+            {
+                id: 'bitcoin', symbol: 'btc', name: 'Bitcoin',
+                current_price: 64250.00, price_change_percentage_24h: 3.42,
+                market_cap: 1260000000000, total_volume: 28500000000,
+                high_24h: 65100.00, low_24h: 62800.00, circulating_supply: 19700000,
+                ath: 73750.07, market_cap_rank: 1,
+                image: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png',
+                sparkline_in_24h: { price: [62000, 62400, 63100, 62800, 63500, 64000, 64250] }
+            },
+            {
+                id: 'ethereum', symbol: 'eth', name: 'Ethereum',
+                current_price: 3480.50, price_change_percentage_24h: -1.25,
+                market_cap: 418000000000, total_volume: 14200000000,
+                high_24h: 3560.00, low_24h: 3420.00, circulating_supply: 120000000,
+                ath: 4891.70, market_cap_rank: 2,
+                image: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png',
+                sparkline_in_24h: { price: [3550, 3520, 3490, 3510, 3460, 3450, 3480] }
+            },
+            {
+                id: 'solana', symbol: 'sol', name: 'Solana',
+                current_price: 145.20, price_change_percentage_24h: 8.75,
+                market_cap: 67000000000, total_volume: 4100000000,
+                high_24h: 148.00, low_24h: 132.50, circulating_supply: 460000000,
+                ath: 260.06, market_cap_rank: 3,
+                image: 'https://assets.coingecko.com/coins/images/4128/large/solana.png',
+                sparkline_in_24h: { price: [131, 134, 138, 140, 142, 144, 145] }
+            },
+            {
+                id: 'binancecoin', symbol: 'bnb', name: 'BNB',
+                current_price: 580.10, price_change_percentage_24h: 0.45,
+                market_cap: 87000000000, total_volume: 1100000000,
+                high_24h: 588.00, low_24h: 572.00, circulating_supply: 153000000,
+                ath: 720.67, market_cap_rank: 4,
+                image: 'https://assets.coingecko.com/coins/images/825/large/bnb-icon2_2x.png',
+                sparkline_in_24h: { price: [575, 577, 582, 579, 580, 581, 580] }
+            },
+            {
+                id: 'ripple', symbol: 'xrp', name: 'XRP',
+                current_price: 0.584, price_change_percentage_24h: -3.80,
+                market_cap: 32000000000, total_volume: 1800000000,
+                high_24h: 0.612, low_24h: 0.575, circulating_supply: 56000000000,
+                ath: 3.84, market_cap_rank: 5,
+                image: 'https://assets.coingecko.com/coins/images/44/large/xrp-symbol-white-128.png',
+                sparkline_in_24h: { price: [0.61, 0.60, 0.59, 0.58, 0.59, 0.58, 0.584] }
+            },
+            {
+                id: 'cardano', symbol: 'ada', name: 'Cardano',
+                current_price: 0.385, price_change_percentage_24h: 4.12,
+                market_cap: 13800000000, total_volume: 450000000,
+                high_24h: 0.392, low_24h: 0.368, circulating_supply: 35000000000,
+                ath: 3.10, market_cap_rank: 6,
+                image: 'https://assets.coingecko.com/coins/images/975/large/cardano.png',
+                sparkline_in_24h: { price: [0.36, 0.37, 0.37, 0.38, 0.38, 0.38, 0.385] }
+            },
+            {
+                id: 'avalanche-2', symbol: 'avax', name: 'Avalanche',
+                current_price: 28.40, price_change_percentage_24h: 6.90,
+                market_cap: 11200000000, total_volume: 520000000,
+                high_24h: 29.10, low_24h: 26.30, circulating_supply: 395000000,
+                ath: 146.22, market_cap_rank: 7,
+                image: 'https://assets.coingecko.com/coins/images/12559/large/Avalanche_Circle_RedWhite_Trans.png',
+                sparkline_in_24h: { price: [26.2, 26.8, 27.5, 27.1, 28.0, 28.2, 28.4] }
+            },
+            {
+                id: 'dogecoin', symbol: 'doge', name: 'Dogecoin',
+                current_price: 0.122, price_change_percentage_24h: -2.15,
+                market_cap: 17800000000, total_volume: 890000000,
+                high_24h: 0.128, low_24h: 0.119, circulating_supply: 145000000000,
+                ath: 0.737, market_cap_rank: 8,
+                image: 'https://assets.coingecko.com/coins/images/5/large/dogecoin.png',
+                sparkline_in_24h: { price: [0.125, 0.126, 0.124, 0.122, 0.121, 0.123, 0.122] }
+            }
+        ];
+
+        /**
+         * INITIALIZATION & EVENT LISTENERS
+         */
+        window.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            renderWatchlistCount();
+            renderSkeletons();
+            fetchCryptoData();
+
+            // Auto refresh data every 60 seconds
+            setInterval(() => fetchCryptoData(false), 60000);
+        });
+
+        /**
+         * API INTEGRATION & ERROR HANDLING
+         */
+        async function fetchCryptoData(isManualTrigger = false) {
+            const refreshIcon = document.getElementById('refresh-icon');
+            if (isManualTrigger) refreshIcon.classList.add('fa-spin');
+
+            const apiUrl = 'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=20&page=1&sparkline=true&price_change_percentage=24h';
+
+            try {
+                // Controller timeout of 6 seconds
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+                const response = await fetch(apiUrl, { signal: controller.signal });
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                
+                // Successfully received API data
+                cryptoData = data;
+                isUsingFallback = false;
+                hideErrorBanner();
+                updateApiStatusBadge(true);
+                
+                if (isManualTrigger) {
+                    showToast('Data updated successfully from Live CoinGecko API', 'success');
+                }
+            } catch (error) {
+                console.warn('Live API Request failed or rate-limited. Activating fallback mock dataset.', error);
+                
+                // Fallback mechanism
+                cryptoData = MOCK_CRYPTO_DATA;
+                isUsingFallback = true;
+                showErrorBanner(`API Note: Live network request failed (${error.message}). Displaying reliable simulated data.`);
+                updateApiStatusBadge(false);
+
+                if (isManualTrigger) {
+                    showToast('Using simulated data due to network rate limit', 'warning');
+                }
+            } finally {
+                if (isManualTrigger) {
+                    setTimeout(() => refreshIcon.classList.remove('fa-spin'), 600);
+                }
+                applyFilterAndSort();
+            }
+        }
+
+        /**
+         * UI RENDER FUNCTIONS
+         */
+        function renderCryptoGrid(coins) {
+            const grid = document.getElementById('crypto-grid');
+            const emptyState = document.getElementById('empty-state');
+
+            if (!coins || coins.length === 0) {
+                grid.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            grid.innerHTML = coins.map(coin => {
+                const isWatchlisted = watchlist.includes(coin.id);
+                const isPositive = coin.price_change_percentage_24h >= 0;
+                const changeClass = isPositive ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40' : 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40';
+                const changeIcon = isPositive ? 'fa-caret-up' : 'fa-caret-down';
+
+                // Extract or generate sparkline points for mini chart
+                const sparklinePrices = coin.sparkline_in_24h?.price || [10, 15, 13, 18, 16, 22];
+                const svgPath = generateMiniSvgPath(sparklinePrices);
+
+                return `
+                    <div onclick="openCoinModal('${coin.id}')" class="group relative bg-white dark:bg-slate-800/90 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 hover:border-indigo-500/50 dark:hover:border-indigo-500/50 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col justify-between">
+                        
+                        <!-- Top Header inside Card -->
+                        <div class="flex items-start justify-between gap-3 mb-3">
+                            <div class="flex items-center gap-3">
+                                <img src="${coin.image}" alt="${coin.name}" class="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 p-0.5 object-contain" onerror="this.src='https://placehold.co/40x40/6366f1/ffffff?text=${coin.symbol.toUpperCase()}'">
+                                <div>
+                                    <h3 class="font-bold text-base group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors leading-snug">${coin.name}</h3>
+                                    <span class="text-xs font-semibold text-slate-400 uppercase">${coin.symbol}</span>
+                                </div>
+                            </div>
+
+                            <!-- Watchlist Toggle Star Button -->
+                            <button onclick="event.stopPropagation(); toggleWatchlist('${coin.id}')" title="Toggle Watchlist" class="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700/60 text-slate-400 hover:text-amber-400 transition-colors">
+                                <i class="${isWatchlisted ? 'fa-solid fa-star text-amber-400' : 'fa-regular fa-star'}"></i>
+                            </button>
+                        </div>
+
+                        <!-- Sparkline Mini Chart -->
+                        <div class="w-full h-12 my-2 relative overflow-hidden">
+                            <svg class="w-full h-full" viewBox="0 0 100 30" preserveAspectRatio="none">
+                                <path d="${svgPath}" fill="none" stroke="${isPositive ? '#10b981' : '#f43f5e'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                        </div>
+
+                        <!-- Price & Stats Bottom Bar -->
+                        <div class="flex items-end justify-between mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/50">
+                            <div>
+                                <span class="text-xs text-slate-400 block mb-0.5">Price</span>
+                                <span class="font-bold text-base text-slate-900 dark:text-white">$${formatNumber(coin.current_price)}</span>
+                            </div>
+
+                            <div class="px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 ${changeClass}">
+                                <i class="fa-solid ${changeIcon}"></i>
+                                <span>${Math.abs(coin.price_change_percentage_24h || 0).toFixed(2)}%</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderSkeletons() {
+            const grid = document.getElementById('crypto-grid');
+            grid.innerHTML = Array(8).fill(0).map(() => `
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 animate-pulse flex flex-col justify-between h-48">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700"></div>
+                            <div class="space-y-1.5">
+                                <div class="w-24 h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
+                                <div class="w-12 h-3 bg-slate-200 dark:bg-slate-700 rounded"></div>
+                            </div>
+                        </div>
+                        <div class="w-6 h-6 bg-slate-200 dark:bg-slate-700 rounded-lg"></div>
+                    </div>
+                    <div class="w-full h-10 bg-slate-100 dark:bg-slate-700/50 rounded-xl my-2"></div>
+                    <div class="flex items-center justify-between pt-2">
+                        <div class="w-20 h-5 bg-slate-200 dark:bg-slate-700 rounded"></div>
+                        <div class="w-14 h-5 bg-slate-200 dark:bg-slate-700 rounded"></div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        /**
+         * FILTER & SEARCH LOGIC
+         */
+        function applyFilterAndSort() {
+            let result = [...cryptoData];
+
+            // 1. Filter by Search Query
+            if (searchQuery.trim() !== '') {
+                const query = searchQuery.toLowerCase().trim();
+                result = result.filter(coin => 
+                    coin.name.toLowerCase().includes(query) || 
+                    coin.symbol.toLowerCase().includes(query)
+                );
+            }
+
+            // 2. Filter by Category Tabs
+            if (activeCategory === 'gainers') {
+                result = result.filter(coin => coin.price_change_percentage_24h > 0);
+            } else if (activeCategory === 'losers') {
+                result = result.filter(coin => coin.price_change_percentage_24h < 0);
+            } else if (activeCategory === 'watchlist') {
+                result = result.filter(coin => watchlist.includes(coin.id));
+            }
+
+            // 3. Sorting
+            result.sort((a, b) => {
+                switch (currentSort) {
+                    case 'market_cap_desc':
+                        return (b.market_cap || 0) - (a.market_cap || 0);
+                    case 'market_cap_asc':
+                        return (a.market_cap || 0) - (b.market_cap || 0);
+                    case 'price_desc':
+                        return (b.current_price || 0) - (a.current_price || 0);
+                    case 'price_asc':
+                        return (a.current_price || 0) - (b.current_price || 0);
+                    case 'change_desc':
+                        return (b.price_change_percentage_24h || 0) - (a.price_change_percentage_24h || 0);
+                    case 'change_asc':
+                        return (a.price_change_percentage_24h || 0) - (b.price_change_percentage_24h || 0);
+                    default:
+                        return 0;
+                }
+            });
+
+            filteredData = result;
+            renderCryptoGrid(filteredData);
+        }
+
+        function handleSearch() {
+            searchQuery = document.getElementById('search-input').value;
+            applyFilterAndSort();
+        }
+
+        function handleSort() {
+            currentSort = document.getElementById('sort-select').value;
+            applyFilterAndSort();
+        }
+
+        function setCategoryFilter(category) {
+            activeCategory = category;
+            
+            // Update Tab UI States
+            document.querySelectorAll('.category-tab').forEach(tab => {
+                tab.className = 'category-tab px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all';
+            });
+
+            const activeBtn = document.getElementById(`tab-${category}`);
+            if (activeBtn) {
+                activeBtn.className = 'category-tab px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap bg-indigo-600 text-white shadow-md transition-all';
+            }
+
+            applyFilterAndSort();
+        }
+
+        function resetFilters() {
+            document.getElementById('search-input').value = '';
+            searchQuery = '';
+            setCategoryFilter('all');
+        }
+
+        /**
+         * WATCHLIST MANAGEMENT
+         */
+        function toggleWatchlist(coinId) {
+            if (watchlist.includes(coinId)) {
+                watchlist = watchlist.filter(id => id !== coinId);
+                showToast('Removed from Watchlist', 'info');
+            } else {
+                watchlist.push(coinId);
+                showToast('Added to Watchlist!', 'success');
+            }
+
+            localStorage.setItem('swynex_watchlist', JSON.stringify(watchlist));
+            renderWatchlistCount();
+            applyFilterAndSort();
+
+            // Update modal button if currently viewing that coin
+            const modalBtn = document.getElementById('modal-watchlist-btn');
+            if (modalBtn && modalBtn.dataset.coinId === coinId) {
+                updateModalWatchlistBtn(coinId);
+            }
+        }
+
+        function renderWatchlistCount() {
+            document.getElementById('watchlist-count').innerText = watchlist.length;
+        }
+
+        /**
+         * MODAL / DRAWER DETAILS LOGIC
+         */
+        function openCoinModal(coinId) {
+            const coin = cryptoData.find(c => c.id === coinId);
+            if (!coin) return;
+
+            document.getElementById('modal-coin-icon').src = coin.image;
+            document.getElementById('modal-coin-name').innerText = coin.name;
+            document.getElementById('modal-coin-symbol').innerText = coin.symbol;
+            document.getElementById('modal-coin-rank').innerText = `Rank #${coin.market_cap_rank || 'N/A'}`;
+            document.getElementById('modal-coin-price').innerText = `$${formatNumber(coin.current_price)}`;
+            document.getElementById('modal-coin-mcap').innerText = `$${formatCompactNumber(coin.market_cap)}`;
+            document.getElementById('modal-coin-high').innerText = `$${formatNumber(coin.high_24h)}`;
+            document.getElementById('modal-coin-low').innerText = `$${formatNumber(coin.low_24h)}`;
+            document.getElementById('modal-coin-volume').innerText = `$${formatCompactNumber(coin.total_volume)}`;
+            document.getElementById('modal-coin-supply').innerText = formatCompactNumber(coin.circulating_supply);
+            document.getElementById('modal-coin-ath').innerText = `$${formatNumber(coin.ath)}`;
+
+            // Dynamic Price Change Badge
+            const isPositive = coin.price_change_percentage_24h >= 0;
+            const badge = document.getElementById('modal-coin-change-badge');
+            badge.className = `px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1 ${
+                isPositive ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300'
+            }`;
+            badge.innerHTML = `<i class="fa-solid ${isPositive ? 'fa-caret-up' : 'fa-caret-down'}"></i> ${Math.abs(coin.price_change_percentage_24h || 0).toFixed(2)}% (24h)`;
+
+            // Render Modal SVG Chart
+            const sparklinePrices = coin.sparkline_in_24h?.price || [10, 15, 13, 18, 16, 22];
+            renderModalChart(sparklinePrices, isPositive);
+
+            // Setup Watchlist Action Button
+            const modalBtn = document.getElementById('modal-watchlist-btn');
+            modalBtn.dataset.coinId = coin.id;
+            modalBtn.onclick = () => toggleWatchlist(coin.id);
+            updateModalWatchlistBtn(coin.id);
+
+            // Open Modal Transition
+            const modal = document.getElementById('detail-modal');
+            const box = document.getElementById('detail-modal-box');
+            modal.classList.remove('pointer-events-none', 'opacity-0');
+            box.classList.remove('scale-95');
+            box.classList.add('scale-100');
+        }
+
+        function updateModalWatchlistBtn(coinId) {
+            const modalBtn = document.getElementById('modal-watchlist-btn');
+            const isWatchlisted = watchlist.includes(coinId);
+            modalBtn.innerHTML = isWatchlisted ? 
+                '<i class="fa-solid fa-star text-amber-400"></i> In Watchlist' : 
+                '<i class="fa-regular fa-star"></i> Add to Watchlist';
+        }
+
+        function openDocsModal() {
+            const modal = document.getElementById('docs-modal');
+            modal.classList.remove('pointer-events-none', 'opacity-0');
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.add('opacity-0', 'pointer-events-none');
+        }
+
+        /**
+         * SVG CHART GENERATION HELPERS
+         */
+        function generateMiniSvgPath(prices) {
+            if (!prices || prices.length === 0) return "M 0 15 L 100 15";
+            const min = Math.min(...prices);
+            const max = Math.max(...prices);
+            const range = (max - min) || 1;
+
+            return prices.map((price, idx) => {
+                const x = (idx / (prices.length - 1)) * 100;
+                const y = 28 - ((price - min) / range) * 24; // Keep padding
+                return `${idx === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
+            }).join(' ');
+        }
+
+        function renderModalChart(prices, isPositive) {
+            const svg = document.getElementById('modal-chart-svg');
+            if (!prices || prices.length === 0) return;
+
+            const min = Math.min(...prices);
+            const max = Math.max(...prices);
+            const range = (max - min) || 1;
+
+            const strokeColor = isPositive ? '#10b981' : '#f43f5e';
+            const points = prices.map((price, idx) => {
+                const x = (idx / (prices.length - 1)) * 300;
+                const y = 90 - ((price - min) / range) * 80;
+                return `${x.toFixed(1)},${y.toFixed(1)}`;
+            }).join(' ');
+
+            const pathD = `M ${points.split(' ').join(' L ')}`;
+
+            svg.innerHTML = `
+                <defs>
+                    <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="${strokeColor}" stop-opacity="0.3"/>
+                        <stop offset="100%" stop-color="${strokeColor}" stop-opacity="0.0"/>
+                    </linearGradient>
+                </defs>
+                <path d="${pathD} L 300 100 L 0 100 Z" fill="url(#chartGradient)"/>
+                <path d="${pathD}" fill="none" stroke="${strokeColor}" stroke-width="3" stroke-linecap="round" class="path-animate"/>
+            `;
+        }
+
+        /**
+         * TOAST NOTIFICATION SYSTEM
+         */
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+
+            const bgColors = {
+                success: 'bg-emerald-600 text-white',
+                warning: 'bg-amber-500 text-white',
+                error: 'bg-rose-600 text-white',
+                info: 'bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900'
+            };
+
+            const icons = {
+                success: 'fa-circle-check',
+                warning: 'fa-triangle-exclamation',
+                error: 'fa-circle-xmark',
+                info: 'fa-circle-info'
+            };
+
+            toast.className = `pointer-events-auto p-3.5 rounded-2xl shadow-xl flex items-center gap-3 text-xs font-semibold transform transition-all duration-300 translate-y-5 opacity-0 ${bgColors[type] || bgColors.info}`;
+            toast.innerHTML = `
+                <i class="fa-solid ${icons[type] || icons.info} text-base"></i>
+                <span class="flex-1">${message}</span>
+            `;
+
+            container.appendChild(toast);
+
+            // Trigger Animation In
+            setTimeout(() => {
+                toast.classList.remove('translate-y-5', 'opacity-0');
+            }, 10);
+
+            // Remove Toast after 3.5s
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        /**
+         * THEME SWITCHER LOGIC
+         */
+        function initTheme() {
+            const savedTheme = localStorage.getItem('swynex_theme');
+            if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                updateThemeIcon(true);
+            } else {
+                document.documentElement.classList.remove('dark');
+                updateThemeIcon(false);
+            }
+        }
+
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('swynex_theme', isDark ? 'dark' : 'light');
+            updateThemeIcon(isDark);
+        }
+
+        function updateThemeIcon(isDark) {
+            const icon = document.getElementById('theme-icon');
+            if (isDark) {
+                icon.className = 'fa-solid fa-sun text-amber-400';
+            } else {
+                icon.className = 'fa-solid fa-moon text-slate-700';
+            }
+        }
+
+        /**
+         * ERROR BANNER CONTROLS
+         */
+        function showErrorBanner(msg) {
+            const banner = document.getElementById('error-banner');
+            document.getElementById('error-message-text').innerText = msg;
+            banner.classList.remove('hidden');
+        }
+
+        function hideErrorBanner() {
+            document.getElementById('error-banner').classList.add('hidden');
+        }
+
+        function updateApiStatusBadge(isLive) {
+            const badge = document.getElementById('api-status-badge');
+            const text = document.getElementById('api-status-text');
+
+            if (isLive) {
+                badge.className = 'hidden sm:flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50';
+                text.innerText = 'CoinGecko Live API';
+            } else {
+                badge.className = 'hidden sm:flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50';
+                text.innerText = 'Fallback Mode Active';
+            }
+        }
+
+        /**
+         * UTILITY FORMATTERS
+         */
+        function formatNumber(num) {
+            if (num === null || num === undefined) return '0.00';
+            if (num >= 1) {
+                return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+            return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+        }
+
+        function formatCompactNumber(num) {
+            if (!num) return 'N/A';
+            return new Intl.NumberFormat('en-US', { notation: 'compact', compactDisplay: 'short' }).format(num);
+        }
+    </script>
+</body>
+</html>
